@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortune Flow — Financial Wisdom</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,200;0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,200;1,9..40,300;1,9..40,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ─────────────────────────────────────────
+     Apple-inspired design tokens
+     SF Pro fallback chain + web-safe alternates
+     ───────────────────────────────────────── */
+  :root {
+    --font-display: 'Playfair Display', 'New York', Georgia, serif;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+
+    /* Apple spacing system */
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 17px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-section: 80px;
+    --radius-pill: 980px;
+    --radius-lg: 18px;
+
+    --theme-transition: 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── DARK THEME (Apple near-black) ── */
+  [data-theme="dark"] {
+    --bg-primary: #000000;
+    --bg-secondary: #1d1d1f;
+    --text-primary: #f5f5f7;
+    --text-secondary: rgba(245, 245, 247, 0.55);
+    --text-tertiary: rgba(245, 245, 247, 0.3);
+    --accent: #0071e3;
+    --particle-color: 245, 245, 247;
+    --particle-base-alpha: 0.06;
+    --particle-active-alpha: 0.4;
+    --line-alpha: 0.04;
+    --glow-color: rgba(0, 113, 227, 0.06);
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --divider: rgba(255, 255, 255, 0.08);
+    --toggle-bg: rgba(255, 255, 255, 0.06);
+    --toggle-bg-hover: rgba(255, 255, 255, 0.1);
+    --toggle-icon-color: #f5f5f7;
+    --vignette-color: rgba(0, 0, 0, 0.85);
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  /* ── LIGHT THEME (Apple pure white + frost gray) ── */
+  [data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f7;
+    --text-primary: #1d1d1f;
+    --text-secondary: rgba(29, 29, 31, 0.55);
+    --text-tertiary: rgba(29, 29, 31, 0.25);
+    --accent: #0066cc;
+    --particle-color: 29, 29, 31;
+    --particle-base-alpha: 0.04;
+    --particle-active-alpha: 0.25;
+    --line-alpha: 0.03;
+    --glow-color: rgba(0, 102, 204, 0.05);
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(0, 0, 0, 0.06);
+    --divider: rgba(0, 0, 0, 0.08);
+    --toggle-bg: rgba(0, 0, 0, 0.04);
+    --toggle-bg-hover: rgba(0, 0, 0, 0.08);
+    --toggle-icon-color: #1d1d1f;
+    --vignette-color: rgba(255, 255, 255, 0.7);
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-primary);
+    font-family: var(--font-body);
+    transition: background var(--theme-transition);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Canvas ── */
+  canvas#field { position: fixed; inset: 0; z-index: 0; }
+
+  /* ── Cursor glow ── */
+  #cursor-glow {
+    position: fixed; width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+    pointer-events: none; transform: translate(-50%, -50%); z-index: 1;
+    transition: opacity 0.5s ease;
+    opacity: 0;
+  }
+
+  /* ── Vignette ── */
+  .vignette {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, var(--vignette-color) 100%);
+    transition: background var(--theme-transition);
+  }
+
+  /* ── Quote container ── */
+  .quote-wrap {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 2; padding: var(--spacing-lg);
+    pointer-events: none;
+  }
+
+  .quote-card {
+    max-width: 640px;
+    padding: 48px 44px;
+    text-align: center;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    box-shadow: var(--card-shadow);
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    animation: cardIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+    transition:
+      background var(--theme-transition),
+      border-color var(--theme-transition),
+      box-shadow var(--theme-transition);
+  }
+
+  .quote-label {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--spacing-lg);
+    transition: color var(--theme-transition);
+  }
+
+  .divider {
+    width: 32px; height: 1px;
+    background: var(--divider);
+    margin: 0 auto var(--spacing-lg);
+    transition: background var(--theme-transition);
+  }
+
+  .quote-text {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(1.35rem, 3.2vw, 2rem);
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    transition: color var(--theme-transition);
+  }
+
+  .divider-bottom {
+    width: 32px; height: 1px;
+    background: var(--divider);
+    margin: var(--spacing-lg) auto 0;
+    transition: background var(--theme-transition);
+  }
+
+  .hint {
+    margin-top: var(--spacing-xl);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary);
+    opacity: 0;
+    animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 1.2s forwards;
+    transition: color var(--theme-transition);
+  }
+
+  /* ── Theme toggle — Apple pill CTA ── */
+  .theme-toggle {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    background: var(--toggle-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    cursor: pointer;
+    transition:
+      background var(--theme-transition),
+      border-color var(--theme-transition),
+      transform 0.2s ease;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .theme-toggle:hover {
+    background: var(--toggle-bg-hover);
+    transform: translateX(-50%) scale(1.02);
+  }
+  .theme-toggle:active {
+    transform: translateX(-50%) scale(0.97);
+  }
+
+  .toggle-icon {
+    width: 18px; height: 18px;
+    position: relative; flex-shrink: 0;
+  }
+
+  .icon-sun, .icon-moon {
+    position: absolute; inset: 0;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .icon-sun svg, .icon-moon svg {
+    width: 18px; height: 18px;
+    fill: none;
+    stroke: var(--toggle-icon-color);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke var(--theme-transition);
+  }
+
+  [data-theme="dark"] .icon-sun  { opacity: 1; transform: rotate(0deg); }
+  [data-theme="dark"] .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.7); }
+  [data-theme="light"] .icon-sun  { opacity: 0; transform: rotate(30deg) scale(0.7); }
+  [data-theme="light"] .icon-moon { opacity: 1; transform: rotate(0deg); }
+
+  .toggle-label {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--text-secondary);
+    user-select: none;
+    transition: color var(--theme-transition);
+    white-space: nowrap;
+  }
+
+  @keyframes cardIn {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .quote-card { padding: 32px 28px; }
+    .theme-toggle { bottom: 24px; padding: 9px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="field"></canvas>
+<div id="cursor-glow"></div>
+<div class="vignette"></div>
+
+<div class="quote-wrap">
+  <div class="quote-card">
+    <span class="quote-label">Fortune Flow</span>
+    <div class="divider"></div>
+    <p class="quote-text" id="quote"></p>
+    <div class="divider-bottom"></div>
+  </div>
+  <p class="hint">Refresh for new wisdom</p>
+</div>
+
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark theme">
+  <div class="toggle-icon">
+    <div class="icon-sun">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </div>
+    <div class="icon-moon">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </div>
+  </div>
+  <span class="toggle-label" id="toggleLabel">Switch to Light</span>
+</button>
+
+<script>
+/* ═══════════════════════════════════════════
+   QUOTES
+   ═══════════════════════════════════════════ */
+const quotes = [
+  "Wealth is not about having a lot of money; it's about having a lot of options.",
+  "The stock market is a device for transferring money from the impatient to the patient.",
+  "Do not save what is left after spending, but spend what is left after saving.",
+  "An investment in knowledge pays the best interest.",
+  "Financial freedom is available to those who learn about it and work for it.",
+  "The habit of saving is itself an education; it fosters every virtue, teaches self-denial, cultivates the sense of order.",
+  "Money is only a tool. It will take you wherever you wish, but it will not replace you as the driver.",
+  "Compound interest is the eighth wonder of the world. He who understands it, earns it; he who doesn't, pays it.",
+  "It's not your salary that makes you rich, it's your spending habits.",
+  "The best time to plant a tree was twenty years ago. The second best time is now.",
+  "Risk comes from not knowing what you're doing.",
+  "Every morning is a new opportunity to build the wealth you deserve.",
+  "Discipline is choosing between what you want now and what you want most.",
+  "Fortune favors the bold, but it stays with the disciplined.",
+  "Your net worth is not your self-worth, but building both takes intention.",
+  "The goal isn't more money. The goal is living life on your terms.",
+  "Small daily improvements over time lead to stunning financial results.",
+  "Don't work for money; make money work for you.",
+  "A budget is telling your money where to go instead of wondering where it went.",
+  "Wealth consists not in having great possessions, but in having few wants.",
+  "The only limit to your financial impact is your own imagination and commitment.",
+  "Money grows when you respect it, nurture it, and give it direction.",
+  "Be fearful when others are greedy, and greedy when others are fearful.",
+  "Prosperity is not just about accumulation — it's about circulation.",
+  "Time in the market always beats timing the market.",
+  "Rich is a destination. Wealthy is a journey. Choose the journey.",
+  "Your future self will thank you for the sacrifices you make today.",
+  "Financial literacy is not a luxury. It is a necessity for survival.",
+  "Invest in yourself — the returns are infinite.",
+  "The road to financial freedom begins with a single conscious decision."
+];
+
+document.getElementById('quote').textContent =
+  quotes[Math.floor(Math.random() * quotes.length)];
+
+/* ═══════════════════════════════════════════
+   THEME TOGGLE
+   ═══════════════════════════════════════════ */
+const root = document.documentElement;
+const toggleBtn = document.getElementById('themeToggle');
+const toggleLabel = document.getElementById('toggleLabel');
+
+const savedTheme = localStorage.getItem('fortune-flow-theme');
+if (savedTheme) {
+  root.setAttribute('data-theme', savedTheme);
+  updateLabel(savedTheme);
+}
+
+function updateLabel(theme) {
+  toggleLabel.textContent = theme === 'dark' ? 'Switch to Light' : 'Switch to Dark';
+}
+
+toggleBtn.addEventListener('click', () => {
+  const current = root.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('fortune-flow-theme', next);
+  updateLabel(next);
+});
+
+/* ═══════════════════════════════════════════
+   INTERACTIVE PARTICLE FIELD
+   ═══════════════════════════════════════════ */
+const canvas = document.getElementById('field');
+const ctx = canvas.getContext('2d');
+let W, H;
+let mouse = { x: -9999, y: -9999 };
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const glow = document.getElementById('cursor-glow');
+document.addEventListener('mousemove', e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+  glow.style.left = e.clientX + 'px';
+  glow.style.top = e.clientY + 'px';
+  glow.style.opacity = '1';
+});
+document.addEventListener('mouseleave', () => {
+  glow.style.opacity = '0';
+  mouse.x = -9999;
+  mouse.y = -9999;
+});
+
+function getVar(name) {
+  return getComputedStyle(root).getPropertyValue(name).trim();
+}
+function getFloat(name) {
+  return parseFloat(getComputedStyle(root).getPropertyValue(name));
+}
+
+const PARTICLE_COUNT = 160;
+const INTERACT_RADIUS = 170;
+const LINE_RADIUS = 110;
+const LINE_RADIUS_SQ = LINE_RADIUS * LINE_RADIUS;
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.25;
+    this.vy = (Math.random() - 0.5) * 0.25;
+    this.r = Math.random() * 1.6 + 0.5;
+    this.alphaOffset = Math.random();
+    this.alpha = 0;
+  }
+  update(baseAlpha, activeAlpha) {
+    const dx = this.x - mouse.x;
+    const dy = this.y - mouse.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < INTERACT_RADIUS && dist > 0) {
+      const force = (INTERACT_RADIUS - dist) / INTERACT_RADIUS;
+      const angle = Math.atan2(dy, dx);
+      this.vx += Math.cos(angle) * force * 0.035 - Math.sin(angle) * force * 0.012;
+      this.vy += Math.sin(angle) * force * 0.035 + Math.cos(angle) * force * 0.012;
+      this.alpha = baseAlpha + force * activeAlpha;
+    } else {
+      this.alpha = baseAlpha + this.alphaOffset * baseAlpha * 0.5;
+    }
+
+    this.vx *= 0.987;
+    this.vy *= 0.987;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.x < -10) this.x = W + 10;
+    if (this.x > W + 10) this.x = -10;
+    if (this.y < -10) this.y = H + 10;
+    if (this.y > H + 10) this.y = -10;
+  }
+  draw(color) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${color},${this.alpha})`;
+    ctx.fill();
+  }
+}
+
+const particles = Array.from({ length: PARTICLE_COUNT }, () => new Particle());
+
+function drawLines(color, lineAlpha) {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < LINE_RADIUS_SQ) {
+        const alpha = (1 - Math.sqrt(distSq) / LINE_RADIUS) * lineAlpha;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function loop() {
+  ctx.clearRect(0, 0, W, H);
+
+  const color = getVar('--particle-color');
+  const baseAlpha = getFloat('--particle-base-alpha');
+  const activeAlpha = getFloat('--particle-active-alpha');
+  const lineAlpha = getFloat('--line-alpha');
+
+  particles.forEach(p => {
+    p.update(baseAlpha, activeAlpha);
+    p.draw(color);
+  });
+  drawLines(color, lineAlpha);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
