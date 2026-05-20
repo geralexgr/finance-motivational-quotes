@@ -130,6 +130,81 @@
       background var(--theme-transition),
       border-color var(--theme-transition),
       box-shadow var(--theme-transition);
+    position: relative;
+  }
+
+  /* ── Copy button ── */
+  .copy-btn {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: all;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s ease, border-color var(--theme-transition), transform 0.15s ease;
+  }
+  .copy-btn:hover { background: var(--toggle-bg-hover); transform: scale(1.08); }
+  .copy-btn:active { transform: scale(0.92); }
+  .copy-btn svg {
+    width: 13px; height: 13px;
+    stroke: var(--text-tertiary);
+    stroke-width: 1.5;
+    stroke-linecap: round; stroke-linejoin: round;
+    fill: none;
+    transition: stroke var(--theme-transition);
+  }
+  .copy-btn.copied svg { stroke: var(--accent); }
+
+  /* ── Nav row ── */
+  .nav-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    pointer-events: all;
+    opacity: 0;
+    animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 1.2s forwards;
+  }
+
+  .nav-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: var(--toggle-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background var(--theme-transition), border-color var(--theme-transition), transform 0.2s ease;
+  }
+  .nav-btn:hover { background: var(--toggle-bg-hover); transform: scale(1.08); }
+  .nav-btn:active { transform: scale(0.92); }
+  .nav-btn svg {
+    width: 14px; height: 14px;
+    stroke: var(--text-secondary);
+    stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+    fill: none;
+    transition: stroke var(--theme-transition);
+  }
+
+  .nav-counter {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    min-width: 48px;
+    text-align: center;
+    transition: color var(--theme-transition);
   }
 
   .quote-label {
@@ -159,7 +234,7 @@
     line-height: 1.5;
     letter-spacing: -0.01em;
     color: var(--text-primary);
-    transition: color var(--theme-transition);
+    transition: opacity 0.2s ease, transform 0.2s ease, color var(--theme-transition);
   }
 
   .divider-bottom {
@@ -274,8 +349,19 @@
     <div class="divider"></div>
     <p class="quote-text" id="quote"></p>
     <div class="divider-bottom"></div>
+    <button class="copy-btn" id="copyBtn" aria-label="Copy quote to clipboard">
+      <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    </button>
   </div>
-  <p class="hint">Refresh for new wisdom</p>
+  <div class="nav-row">
+    <button class="nav-btn" id="prevBtn" aria-label="Previous quote">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span class="nav-counter" id="counter"></span>
+    <button class="nav-btn" id="nextBtn" aria-label="Next quote">
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
 </div>
 
 <button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark theme">
@@ -327,8 +413,47 @@ const quotes = [
   "The road to financial freedom begins with a single conscious decision."
 ];
 
-document.getElementById('quote').textContent =
-  quotes[Math.floor(Math.random() * quotes.length)];
+/* ── Quote navigation ── */
+let currentIndex = Math.floor(Math.random() * quotes.length);
+const quoteEl   = document.getElementById('quote');
+const counterEl = document.getElementById('counter');
+
+function showQuote(index, dir = 1) {
+  quoteEl.style.opacity   = '0';
+  quoteEl.style.transform = `translateY(${dir * 10}px)`;
+  setTimeout(() => {
+    quoteEl.textContent     = quotes[index];
+    counterEl.textContent   = `${index + 1} / ${quotes.length}`;
+    quoteEl.style.opacity   = '1';
+    quoteEl.style.transform = 'translateY(0)';
+  }, 200);
+}
+
+function navigate(dir) {
+  currentIndex = (currentIndex + dir + quotes.length) % quotes.length;
+  showQuote(currentIndex, dir);
+}
+
+showQuote(currentIndex);
+
+document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
+document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space')      { e.preventDefault(); navigate(1); }
+  if (e.code === 'ArrowRight') navigate(1);
+  if (e.code === 'ArrowLeft')  navigate(-1);
+});
+
+/* ── Copy to clipboard ── */
+const copyBtn = document.getElementById('copyBtn');
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(quotes[currentIndex]).then(() => {
+    copyBtn.classList.add('copied');
+    setTimeout(() => copyBtn.classList.remove('copied'), 1500);
+  });
+});
 
 /* ═══════════════════════════════════════════
    THEME TOGGLE
