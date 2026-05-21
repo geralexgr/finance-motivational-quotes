@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'gh pr create'; then echo 'A PR was just created. Automatically run the /review skill now: review all staged changes for (1) logic errors and edge cases, (2) security vulnerabilities, (3) style consistency with the codebase.'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
